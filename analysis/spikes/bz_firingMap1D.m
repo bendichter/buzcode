@@ -4,13 +4,13 @@ function [firingMaps] = bz_firingMap1D(varargin)
 %
 % INPUTS
 %
-%   spikes  - buzcode format .cellinfo. struct with the following fields
-%           .times 
+%   spikes   - buzcode format .cellinfo. struct with the following fields
+%            .times 
 %
-%   behavior
+%   behavior - see: https://github.com/buzsakilab/buzcode/wiki/Data-Formatting-Standards#behavior
 %
 %
-%   tau
+%   tau      - temporal smoothing parameter
 %
 %
 % OUTPUT
