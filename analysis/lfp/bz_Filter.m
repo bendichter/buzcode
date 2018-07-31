@@ -56,6 +56,7 @@ nyquist = 625; %written over later from samples.samplingRate if available
 type = 'cheby2';
 FMAlegacy = false;
 BUZCODE = false;
+matlabVersion = version('-release');
 
 % Check number of parameters
 if nargin < 1 | mod(length(varargin),2) ~= 0,
@@ -80,8 +81,7 @@ for i = 1:2:length(varargin),
 			passband = varargin{i+1};
 			if ~isdvector(passband,'#2','>=0'),
 				error('Incorrect value for ''passband'' (type ''help <a href="matlab:help Filter">Filter</a>'' for details).');
-			end
-
+            end
 		case 'stopband',
 			if ~isempty(passband),
 				error('Cannot specify both a passband and stopband (type ''help <a href="matlab:help Filter">Filter</a>'' for details).');
@@ -89,11 +89,10 @@ for i = 1:2:length(varargin),
 			stopband = varargin{i+1};
 			if ~isdvector(stopband,'#2','>=0'),
 				error('Incorrect value for ''stopband'' (type ''help <a href="matlab:help Filter">Filter</a>'' for details).');
-			end
-
+            end
 		case 'filter',
 			type = lower(varargin{i+1});
-			if ~isstring_FMAT(type,'cheby2','fir1'),
+			if ~isstring_FMAT(type,'cheby2','fir1','butter'),
 				error(['Unknown filter type ''' type ''' (type ''help <a href="matlab:help Filter">Filter</a>'' for details).']);
 			end
 
@@ -178,19 +177,33 @@ switch(type),
         else
             filt_order = round(order*2*nyquist./stopband(1));
 			[b a] = fir1(filt_order,stopband/nyquist,'stop');
-		end
+        end
+    case 'butter'
+        if ~isempty(passband)
+            [b a] = butter(order,[passband(1)/nyquist passband(2)/nyquist],'bandpass');
+        else
+            [b a] = butter(order,stopband(1)/nyquist,'stop');
+        end
 end
 
 
 if FMAlegacy %FMA has (samples given as a list of (t,v1,v2,v3...) tuples)
     filtered(:,1) = samples(:,1);
     for i = 2:size(samples,2),
-        filtered(:,i) = FiltFiltM(b,a,double(samples(:,i)));
+        if strcmp(matlabVersion,'2017a')
+            filtered(:,i) = filtfilt(b,a,double(samples(:,i)));
+        else
+            filtered(:,i) = FiltFiltM(b,a,double(samples(:,i)));
+        end
     end
 elseif BUZCODE %BUZCODE has samples as a data structure
     filtered.timestamps = samples.timestamps;
     for i = 1:size(samples.data,2),
-        filtered.data(:,i) = FiltFiltM(b,a,double(samples.data(:,i)));
+        if strcmp(matlabVersion,'2017a')
+           filtered.data(:,i) = filtfilt(b,a,double(samples.data(:,i)));
+        else
+           filtered.data(:,i) = FiltFiltM(b,a,double(samples.data(:,i))); 
+        end
 	hilb = hilbert(filtered.data(:,i));
         filtered.amp(:,i) = abs(hilb);
         filtered.phase(:,i) = angle(hilb);
@@ -201,7 +214,12 @@ elseif BUZCODE %BUZCODE has samples as a data structure
     filtered.samplingRate = samples.samplingRate;
 else %or if you just want filter a basic timeseries
     for i = 1:size(samples,2),
-        filtered(:,i) = FiltFiltM(b,a,double(samples(:,i)));
+        if strcmp(matlabVersion,'2017a')
+            filtered(:,i) = filtfilt(b,a,double(samples(:,i)));
+        else
+            filtered(:,i) = FiltFiltM(b,a,double(samples(:,i)));    
+        end
+        
     end
 end
 
